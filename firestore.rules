@@ -1,0 +1,289 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedOwner() {
+      return isVerifiedUser() && request.auth.token.email == 'bhartii009k@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedOwner() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'role', 'createdAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+        data.role == 'admin' &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidCategory(data) {
+      return data.keys().hasAll(['name', 'slug', 'sortOrder', 'isActive', 'updatedAt']) &&
+        data.keys().hasOnly(['name', 'slug', 'description', 'sortOrder', 'isActive', 'updatedAt']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 60 &&
+        data.slug is string && data.slug.size() >= 1 && data.slug.size() <= 60 && data.slug.matches('^[a-z0-9-]+$') &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 240)) &&
+        data.sortOrder is number && data.sortOrder >= 0 && data.sortOrder <= 10000 &&
+        data.isActive is bool &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidMenuItem(data) {
+      return data.keys().hasAll(['name', 'description', 'categoryId', 'categoryConfirmed', 'price', 'priceConfirmed', 'dietaryType', 'isAvailable', 'isFeatured', 'sortOrder', 'updatedAt']) &&
+        data.keys().hasOnly(['name', 'description', 'categoryId', 'categoryConfirmed', 'price', 'priceConfirmed', 'dietaryType', 'isAvailable', 'isFeatured', 'sortOrder', 'updatedAt']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        data.description is string && data.description.size() <= 500 &&
+        data.categoryId is string && data.categoryId.size() <= 60 &&
+        data.categoryConfirmed is bool &&
+        data.price is number && data.price >= 0 && data.price <= 100000 &&
+        data.priceConfirmed is bool &&
+        data.dietaryType in ['unconfirmed', 'veg', 'non-veg'] &&
+        data.isAvailable is bool &&
+        data.isFeatured is bool &&
+        data.sortOrder is number && data.sortOrder >= 0 && data.sortOrder <= 10000 &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['referenceCode', 'customerUid', 'customerName', 'customerPhone', 'fulfillmentType', 'deliveryAddress', 'notes', 'items', 'subtotal', 'additionalCharges', 'total', 'status', 'paymentStatus', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['referenceCode', 'customerUid', 'customerName', 'customerPhone', 'fulfillmentType', 'deliveryAddress', 'notes', 'items', 'subtotal', 'additionalCharges', 'total', 'status', 'paymentStatus', 'adminNote', 'createdAt', 'updatedAt']) &&
+        data.referenceCode is string && data.referenceCode.size() >= 4 && data.referenceCode.size() <= 32 && data.referenceCode.matches('^ORD-[A-Z0-9]+$') &&
+        data.customerUid is string && data.customerUid.size() >= 1 && data.customerUid.size() <= 128 &&
+        data.customerName is string && data.customerName.size() >= 2 && data.customerName.size() <= 100 &&
+        data.customerPhone is string && data.customerPhone.size() >= 7 && data.customerPhone.size() <= 24 &&
+        data.fulfillmentType in ['pickup', 'delivery'] &&
+        data.deliveryAddress is string && data.deliveryAddress.size() <= 300 &&
+        data.notes is string && data.notes.size() <= 400 &&
+        data.items is list && data.items.size() >= 1 && data.items.size() <= 30 &&
+        data.items[0] is map &&
+        data.subtotal is number && data.subtotal >= 0 && data.subtotal <= 500000 &&
+        data.additionalCharges is number && data.additionalCharges >= 0 && data.additionalCharges <= 50000 &&
+        data.total is number && data.total >= 0 && data.total <= 550000 &&
+        data.status in ['submitted', 'accepted', 'preparing', 'ready', 'completed', 'rejected', 'cancelled'] &&
+        data.paymentStatus == 'unpaid_offline' &&
+        (!('adminNote' in data) || (data.adminNote is string && data.adminNote.size() <= 300)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidOrderStatusPublic(data) {
+      return data.keys().hasAll(['referenceCode', 'status', 'fulfillmentType', 'updatedAt']) &&
+        data.keys().hasOnly(['referenceCode', 'status', 'fulfillmentType', 'updatedAt']) &&
+        data.referenceCode is string && data.referenceCode.size() >= 4 && data.referenceCode.size() <= 32 && data.referenceCode.matches('^ORD-[A-Z0-9]+$') &&
+        data.status in ['submitted', 'accepted', 'preparing', 'ready', 'completed', 'rejected', 'cancelled'] &&
+        data.fulfillmentType in ['pickup', 'delivery'] &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidReservation(data) {
+      return data.keys().hasAll(['referenceCode', 'customerUid', 'customerName', 'customerPhone', 'customerEmail', 'reservationDate', 'preferredTime', 'guests', 'specialRequests', 'status', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['referenceCode', 'customerUid', 'customerName', 'customerPhone', 'customerEmail', 'reservationDate', 'preferredTime', 'guests', 'specialRequests', 'status', 'adminNote', 'createdAt', 'updatedAt']) &&
+        data.referenceCode is string && data.referenceCode.size() >= 4 && data.referenceCode.size() <= 32 && data.referenceCode.matches('^RES-[A-Z0-9]+$') &&
+        data.customerUid is string && data.customerUid.size() >= 1 && data.customerUid.size() <= 128 &&
+        data.customerName is string && data.customerName.size() >= 2 && data.customerName.size() <= 100 &&
+        data.customerPhone is string && data.customerPhone.size() >= 7 && data.customerPhone.size() <= 24 &&
+        data.customerEmail is string && data.customerEmail.size() <= 160 &&
+        data.reservationDate is string && data.reservationDate.size() == 10 && data.reservationDate.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+        data.preferredTime is string && data.preferredTime.size() >= 4 && data.preferredTime.size() <= 20 &&
+        data.guests is number && data.guests >= 1 && data.guests <= 20 &&
+        data.specialRequests is string && data.specialRequests.size() <= 400 &&
+        data.status in ['pending', 'confirmed', 'rejected', 'cancelled'] &&
+        (!('adminNote' in data) || (data.adminNote is string && data.adminNote.size() <= 300)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidReservationStatusPublic(data) {
+      return data.keys().hasAll(['referenceCode', 'status', 'reservationDate', 'preferredTime', 'guests', 'updatedAt']) &&
+        data.keys().hasOnly(['referenceCode', 'status', 'reservationDate', 'preferredTime', 'guests', 'updatedAt']) &&
+        data.referenceCode is string && data.referenceCode.size() >= 4 && data.referenceCode.size() <= 32 && data.referenceCode.matches('^RES-[A-Z0-9]+$') &&
+        data.status in ['pending', 'confirmed', 'rejected', 'cancelled'] &&
+        data.reservationDate is string && data.reservationDate.size() == 10 &&
+        data.preferredTime is string && data.preferredTime.size() >= 4 && data.preferredTime.size() <= 20 &&
+        data.guests is number && data.guests >= 1 && data.guests <= 20 &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidGalleryImage(data) {
+      return data.keys().hasAll(['title', 'altText', 'caption', 'category', 'dataUrl', 'isFeatured', 'sortOrder', 'createdAt']) &&
+        data.keys().hasOnly(['title', 'altText', 'caption', 'category', 'dataUrl', 'isFeatured', 'sortOrder', 'createdAt']) &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+        data.altText is string && data.altText.size() >= 3 && data.altText.size() <= 200 &&
+        data.caption is string && data.caption.size() <= 300 &&
+        data.category is string && data.category.size() >= 1 && data.category.size() <= 40 &&
+        data.dataUrl is string && data.dataUrl.size() >= 20 && data.dataUrl.size() <= 750000 &&
+        data.dataUrl.matches('^data:image/(webp|jpeg|jpg|png);base64,[A-Za-z0-9+/=]+$') &&
+        data.isFeatured is bool &&
+        data.sortOrder is number && data.sortOrder >= 0 && data.sortOrder <= 10000 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidSiteConfig(data) {
+      return data.keys().hasAll(['configKey', 'payload', 'updatedAt']) &&
+        data.keys().hasOnly(['configKey', 'payload', 'updatedAt']) &&
+        data.configKey in ['business', 'content', 'policies', 'ordering'] &&
+        data.payload is map &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidContactMessage(data) {
+      return data.keys().hasAll(['name', 'phone', 'email', 'subject', 'message', 'status', 'createdAt']) &&
+        data.keys().hasOnly(['name', 'phone', 'email', 'subject', 'message', 'status', 'createdAt']) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+        data.phone is string && data.phone.size() >= 7 && data.phone.size() <= 24 &&
+        data.email is string && data.email.size() <= 160 &&
+        data.subject is string && data.subject.size() >= 2 && data.subject.size() <= 120 &&
+        data.message is string && data.message.size() >= 5 && data.message.size() <= 1000 &&
+        data.status in ['new', 'reviewed', 'archived'] &&
+        data.createdAt is timestamp;
+    }
+
+    match /admins/{userId} {
+      allow get: if isValidId(userId) && (isAdmin() || (isVerifiedUser() && request.auth.uid == userId));
+      allow list: if isAdmin();
+      allow create: if isValidId(userId) && isAdmin() && isValidAdminUser(incoming()) && incoming().uid == userId && incoming().createdAt == request.time;
+      allow update: if isValidId(userId) && isAdmin() && isValidAdminUser(incoming()) && incoming().uid == existing().uid && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(userId) && isAdmin() && userId != request.auth.uid;
+    }
+
+    match /categories/{categoryId} {
+      allow get: if isValidId(categoryId);
+      allow list: if true;
+      allow create: if isValidId(categoryId) && isAdmin() && isValidCategory(incoming());
+      allow update: if isValidId(categoryId) && isAdmin() && isValidCategory(incoming());
+      allow delete: if isValidId(categoryId) && isAdmin();
+    }
+
+    match /menuItems/{itemId} {
+      allow get: if isValidId(itemId);
+      allow list: if true;
+      allow create: if isValidId(itemId) && isAdmin() && isValidMenuItem(incoming());
+      allow update: if isValidId(itemId) && isAdmin() && isValidMenuItem(incoming());
+      allow delete: if isValidId(itemId) && isAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow get: if isValidId(orderId) && (isAdmin() || (isVerifiedUser() && existing().customerUid == request.auth.uid));
+      allow list: if isAdmin() || (isVerifiedUser() && resource.data.customerUid == request.auth.uid);
+      allow create: if isValidId(orderId) &&
+        isValidOrder(incoming()) &&
+        incoming().status == 'submitted' &&
+        incoming().createdAt == request.time &&
+        ((isSignedIn() && incoming().customerUid == request.auth.uid) || (!isSignedIn() && incoming().customerUid == 'guest')) &&
+        existsAfter(/databases/$(database)/documents/orderStatuses/$(incoming().referenceCode));
+      allow update: if isValidId(orderId) &&
+        isAdmin() &&
+        isValidOrder(incoming()) &&
+        incoming().referenceCode == existing().referenceCode &&
+        incoming().customerUid == existing().customerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'adminNote', 'updatedAt']);
+      allow delete: if isValidId(orderId) && isAdmin();
+    }
+
+    match /orderStatuses/{referenceCode} {
+      allow get: if isValidId(referenceCode);
+      allow list: if false;
+      allow create: if isValidId(referenceCode) &&
+        isValidOrderStatusPublic(incoming()) &&
+        incoming().referenceCode == referenceCode &&
+        incoming().status == 'submitted';
+      allow update: if isValidId(referenceCode) &&
+        isAdmin() &&
+        isValidOrderStatusPublic(incoming()) &&
+        incoming().referenceCode == existing().referenceCode &&
+        incoming().fulfillmentType == existing().fulfillmentType &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+      allow delete: if isValidId(referenceCode) && isAdmin();
+    }
+
+    match /reservations/{reservationId} {
+      allow get: if isValidId(reservationId) && (isAdmin() || (isVerifiedUser() && existing().customerUid == request.auth.uid));
+      allow list: if isAdmin() || (isVerifiedUser() && resource.data.customerUid == request.auth.uid);
+      allow create: if isValidId(reservationId) &&
+        isValidReservation(incoming()) &&
+        incoming().status == 'pending' &&
+        incoming().createdAt == request.time &&
+        ((isSignedIn() && incoming().customerUid == request.auth.uid) || (!isSignedIn() && incoming().customerUid == 'guest')) &&
+        existsAfter(/databases/$(database)/documents/reservationStatuses/$(incoming().referenceCode));
+      allow update: if isValidId(reservationId) &&
+        isAdmin() &&
+        isValidReservation(incoming()) &&
+        incoming().referenceCode == existing().referenceCode &&
+        incoming().customerUid == existing().customerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'adminNote', 'updatedAt']);
+      allow delete: if isValidId(reservationId) && isAdmin();
+    }
+
+    match /reservationStatuses/{referenceCode} {
+      allow get: if isValidId(referenceCode);
+      allow list: if false;
+      allow create: if isValidId(referenceCode) &&
+        isValidReservationStatusPublic(incoming()) &&
+        incoming().referenceCode == referenceCode &&
+        incoming().status == 'pending';
+      allow update: if isValidId(referenceCode) &&
+        isAdmin() &&
+        isValidReservationStatusPublic(incoming()) &&
+        incoming().referenceCode == existing().referenceCode &&
+        incoming().reservationDate == existing().reservationDate &&
+        incoming().preferredTime == existing().preferredTime &&
+        incoming().guests == existing().guests &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+      allow delete: if isValidId(referenceCode) && isAdmin();
+    }
+
+    match /gallery/{imageId} {
+      allow get: if isValidId(imageId);
+      allow list: if true;
+      allow create: if isValidId(imageId) && isAdmin() && isValidGalleryImage(incoming()) && incoming().createdAt == request.time;
+      allow update: if isValidId(imageId) && isAdmin() && isValidGalleryImage(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(imageId) && isAdmin();
+    }
+
+    match /siteConfig/{configKey} {
+      allow get: if isValidId(configKey);
+      allow list: if true;
+      allow create: if isValidId(configKey) && isAdmin() && isValidSiteConfig(incoming()) && incoming().configKey == configKey;
+      allow update: if isValidId(configKey) && isAdmin() && isValidSiteConfig(incoming()) && incoming().configKey == configKey;
+      allow delete: if isValidId(configKey) && isAdmin();
+    }
+
+    match /contactMessages/{messageId} {
+      allow get: if isValidId(messageId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(messageId) && isValidContactMessage(incoming()) && incoming().status == 'new' && incoming().createdAt == request.time;
+      allow update: if isValidId(messageId) && isAdmin() && isValidContactMessage(incoming()) && incoming().createdAt == existing().createdAt && incoming().diff(existing()).affectedKeys().hasOnly(['status']);
+      allow delete: if isValidId(messageId) && isAdmin();
+    }
+  }
+}

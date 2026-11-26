@@ -1,0 +1,204 @@
+{
+  "entities": {
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized cafe administrator account.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "email": { "type": "string", "minLength": 3, "maxLength": 200 },
+        "role": { "type": "string", "enum": ["admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "MenuCategory": {
+      "title": "MenuCategory",
+      "description": "Editable menu category managed by the cafe owner.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "slug": { "type": "string", "minLength": 1, "maxLength": 60, "pattern": "^[a-z0-9-]+$" },
+        "description": { "type": "string", "maxLength": 240 },
+        "sortOrder": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "slug", "sortOrder", "isActive", "updatedAt"]
+    },
+    "MenuItem": {
+      "title": "MenuItem",
+      "description": "Menu dish or beverage item with owner-confirmed pricing, category, and dietary flags.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 500 },
+        "categoryId": { "type": "string", "maxLength": 60 },
+        "categoryConfirmed": { "type": "boolean" },
+        "price": { "type": "number" },
+        "priceConfirmed": { "type": "boolean" },
+        "dietaryType": { "type": "string", "enum": ["unconfirmed", "veg", "non-veg"] },
+        "isAvailable": { "type": "boolean" },
+        "isFeatured": { "type": "boolean" },
+        "sortOrder": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "description", "categoryId", "categoryConfirmed", "price", "priceConfirmed", "dietaryType", "isAvailable", "isFeatured", "sortOrder", "updatedAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer order request stored for cafe review and fulfillment.",
+      "type": "object",
+      "properties": {
+        "referenceCode": { "type": "string", "minLength": 4, "maxLength": 32, "pattern": "^ORD-[A-Z0-9]+$" },
+        "customerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "customerName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "customerPhone": { "type": "string", "minLength": 7, "maxLength": 24 },
+        "fulfillmentType": { "type": "string", "enum": ["pickup", "delivery"] },
+        "deliveryAddress": { "type": "string", "maxLength": 300 },
+        "notes": { "type": "string", "maxLength": 400 },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "additionalCharges": { "type": "number" },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["submitted", "accepted", "preparing", "ready", "completed", "rejected", "cancelled"] },
+        "paymentStatus": { "type": "string", "enum": ["unpaid_offline"] },
+        "adminNote": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["referenceCode", "customerUid", "customerName", "customerPhone", "fulfillmentType", "deliveryAddress", "notes", "items", "subtotal", "additionalCharges", "total", "status", "paymentStatus", "createdAt", "updatedAt"]
+    },
+    "OrderStatusPublic": {
+      "title": "OrderStatusPublic",
+      "description": "Non-PII public lookup record for order request status by exact reference code.",
+      "type": "object",
+      "properties": {
+        "referenceCode": { "type": "string", "minLength": 4, "maxLength": 32, "pattern": "^ORD-[A-Z0-9]+$" },
+        "status": { "type": "string", "enum": ["submitted", "accepted", "preparing", "ready", "completed", "rejected", "cancelled"] },
+        "fulfillmentType": { "type": "string", "enum": ["pickup", "delivery"] },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["referenceCode", "status", "fulfillmentType", "updatedAt"]
+    },
+    "Reservation": {
+      "title": "Reservation",
+      "description": "Customer table reservation request awaiting cafe confirmation.",
+      "type": "object",
+      "properties": {
+        "referenceCode": { "type": "string", "minLength": 4, "maxLength": 32, "pattern": "^RES-[A-Z0-9]+$" },
+        "customerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "customerName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "customerPhone": { "type": "string", "minLength": 7, "maxLength": 24 },
+        "customerEmail": { "type": "string", "maxLength": 160 },
+        "reservationDate": { "type": "string", "minLength": 10, "maxLength": 10, "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "preferredTime": { "type": "string", "minLength": 4, "maxLength": 20 },
+        "guests": { "type": "number" },
+        "specialRequests": { "type": "string", "maxLength": 400 },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "rejected", "cancelled"] },
+        "adminNote": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["referenceCode", "customerUid", "customerName", "customerPhone", "customerEmail", "reservationDate", "preferredTime", "guests", "specialRequests", "status", "createdAt", "updatedAt"]
+    },
+    "ReservationStatusPublic": {
+      "title": "ReservationStatusPublic",
+      "description": "Non-PII public lookup record for reservation request status by exact reference code.",
+      "type": "object",
+      "properties": {
+        "referenceCode": { "type": "string", "minLength": 4, "maxLength": 32, "pattern": "^RES-[A-Z0-9]+$" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "rejected", "cancelled"] },
+        "reservationDate": { "type": "string", "minLength": 10, "maxLength": 10 },
+        "preferredTime": { "type": "string", "minLength": 4, "maxLength": 20 },
+        "guests": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["referenceCode", "status", "reservationDate", "preferredTime", "guests", "updatedAt"]
+    },
+    "GalleryImage": {
+      "title": "GalleryImage",
+      "description": "Authentic Aroma Room Cafe photograph uploaded by the cafe administrator.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "altText": { "type": "string", "minLength": 3, "maxLength": 200 },
+        "caption": { "type": "string", "maxLength": 300 },
+        "category": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "dataUrl": { "type": "string", "minLength": 20, "maxLength": 750000 },
+        "isFeatured": { "type": "boolean" },
+        "sortOrder": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "altText", "caption", "category", "dataUrl", "isFeatured", "sortOrder", "createdAt"]
+    },
+    "SiteConfig": {
+      "title": "SiteConfig",
+      "description": "Publicly readable, admin-editable cafe settings, hours, copy, ordering options, and policies.",
+      "type": "object",
+      "properties": {
+        "configKey": { "type": "string", "enum": ["business", "content", "policies", "ordering"] },
+        "payload": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["configKey", "payload", "updatedAt"]
+    },
+    "ContactMessage": {
+      "title": "ContactMessage",
+      "description": "Customer inquiry submitted through the Contact page.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "phone": { "type": "string", "minLength": 7, "maxLength": 24 },
+        "email": { "type": "string", "maxLength": 160 },
+        "subject": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "message": { "type": "string", "minLength": 5, "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["new", "reviewed", "archived"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "phone", "email", "subject", "message", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Admin role directory"
+    },
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/MenuCategory" },
+      "description": "Editable menu categories"
+    },
+    "/menuItems/{itemId}": {
+      "schema": { "$ref": "#/entities/MenuItem" },
+      "description": "Editable cafe menu items"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Customer order requests (PII protected)"
+    },
+    "/orderStatuses/{referenceCode}": {
+      "schema": { "$ref": "#/entities/OrderStatusPublic" },
+      "description": "Public non-PII order status lookup by reference code"
+    },
+    "/reservations/{reservationId}": {
+      "schema": { "$ref": "#/entities/Reservation" },
+      "description": "Customer table reservation requests (PII protected)"
+    },
+    "/reservationStatuses/{referenceCode}": {
+      "schema": { "$ref": "#/entities/ReservationStatusPublic" },
+      "description": "Public non-PII reservation status lookup by reference code"
+    },
+    "/gallery/{imageId}": {
+      "schema": { "$ref": "#/entities/GalleryImage" },
+      "description": "Owner-uploaded authentic cafe photographs"
+    },
+    "/siteConfig/{configKey}": {
+      "schema": { "$ref": "#/entities/SiteConfig" },
+      "description": "Business settings, content, ordering config, and policies"
+    },
+    "/contactMessages/{messageId}": {
+      "schema": { "$ref": "#/entities/ContactMessage" },
+      "description": "Contact form inquiries (admin-only read)"
+    }
+  }
+}

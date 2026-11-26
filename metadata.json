@@ -1,0 +1,6 @@
+{
+  "name": "Aroma Room Cafe",
+  "description": "A cozy neighbourhood cafe in Sector Alpha II, Greater Noida serving stone-baked pizza and fresh pasta.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
